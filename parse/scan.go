@@ -58,6 +58,10 @@ func (s *scanner) init(buf string) {
 	s.accept = nil
 }
 
+func (s *scanner) substr(start, end int) string {
+	return s.buf[start:end]
+}
+
 // read returns the next unicode character. It returns eof at
 // the end of the string buffer.
 func (s *scanner) read() rune {

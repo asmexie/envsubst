@@ -66,46 +66,59 @@ func (t *Tree) parseAny() (Node, error) {
 	return nil, ErrBadSubstitution
 }
 
-func (t *Tree) parseFunc() (Node, error) {
-	switch t.scanner.peek() {
-	case '#':
-		return t.parseLenFunc()
-	}
+func (t *Tree) parseFunc() (node Node, err error) {
+	startPos := t.scanner.start
+	defer func() {
+		if err != nil {
+			return
+		}
+		funcNode := node.(*FuncNode)
+		if funcNode != nil {
+			funcNode.Orig = t.scanner.substr(startPos, t.scanner.pos)
+		}
+	}()
+	node, err = func() (Node, error) {
+		switch t.scanner.peek() {
+		case '#':
+			return t.parseLenFunc()
+		}
 
-	var name string
-	t.scanner.accept = acceptIdent
-	t.scanner.mode = scanIdent
+		var name string
+		t.scanner.accept = acceptIdent
+		t.scanner.mode = scanIdent
 
-	switch t.scanner.scan() {
-	case tokenIdent:
-		name = t.scanner.string()
-	default:
-		return nil, ErrBadSubstitution
-	}
+		switch t.scanner.scan() {
+		case tokenIdent:
+			name = t.scanner.string()
+		default:
+			return nil, ErrBadSubstitution
+		}
 
-	switch t.scanner.peek() {
-	case ':':
-		return t.parseDefaultOrSubstr(name)
-	case '=':
-		return t.parseDefaultFunc(name)
-	case ',', '^':
-		return t.parseCasingFunc(name)
-	case '/':
-		return t.parseReplaceFunc(name)
-	case '#':
-		return t.parseRemoveFunc(name, acceptHashFunc)
-	case '%':
-		return t.parseRemoveFunc(name, acceptPercentFunc)
-	}
+		switch t.scanner.peek() {
+		case ':':
+			return t.parseDefaultOrSubstr(name)
+		case '=':
+			return t.parseDefaultFunc(name)
+		case ',', '^':
+			return t.parseCasingFunc(name)
+		case '/':
+			return t.parseReplaceFunc(name)
+		case '#':
+			return t.parseRemoveFunc(name, acceptHashFunc)
+		case '%':
+			return t.parseRemoveFunc(name, acceptPercentFunc)
+		}
 
-	t.scanner.accept = acceptIdent
-	t.scanner.mode = scanRbrack
-	switch t.scanner.scan() {
-	case tokenRbrack:
-		return newFuncNode(name), nil
-	default:
-		return nil, ErrBadSubstitution
-	}
+		t.scanner.accept = acceptIdent
+		t.scanner.mode = scanRbrack
+		switch t.scanner.scan() {
+		case tokenRbrack:
+			return newFuncNode(name), nil
+		default:
+			return nil, ErrBadSubstitution
+		}
+	}()
+	return
 }
 
 // parse a substitution function parameter.

@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/drone/envsubst/parse"
+	"github.com/muroachanf/envsubst/parse"
 )
 
 // state represents the state of template execution. It is not part of the
@@ -16,7 +16,7 @@ type state struct {
 	node     parse.Node // current node
 
 	// maps variable names to values
-	mapper func(string) string
+	mapper func(string) (string, bool)
 }
 
 // Template is the representation of a parsed shell format string.
@@ -46,7 +46,7 @@ func ParseFile(path string) (*Template, error) {
 }
 
 // Execute applies a parsed template to the specified data mapping.
-func (t *Template) Execute(mapping func(string) string) (str string, err error) {
+func (t *Template) Execute(mapping func(string) (string, bool)) (str string, err error) {
 	b := new(bytes.Buffer)
 	s := new(state)
 	s.node = t.tree.Root
@@ -106,7 +106,11 @@ func (t *Template) evalFunc(s *state, node *parse.FuncNode) error {
 	s.writer = w
 	s.node = node
 
-	v := s.mapper(node.Param)
+	v, ok := s.mapper(node.Param)
+	if !ok {
+		_, err := io.WriteString(s.writer, node.Orig)
+		return err
+	}
 
 	fn := lookupFunc(node.Name, len(args))
 

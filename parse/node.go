@@ -18,6 +18,7 @@ type (
 
 	// FuncNode represents a string function.
 	FuncNode struct {
+		Orig  string
 		Param string
 		Name  string
 		Args  []Node
